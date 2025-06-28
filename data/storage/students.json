@@ -1,3 +1,7 @@
 [
-    
+    {
+        "id": "001",
+        "name": "John Doe",
+        "email": "johndoe@gmail.com"
+    }
 ]
