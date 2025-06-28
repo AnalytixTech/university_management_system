@@ -1,161 +1,162 @@
-# 
-
-from models import Person, Student, Professor, Course
-from data.file_handler import read_json, write_json, append_to_json, delete_json_record
+from models import Student, Professor, Course
+from data.file_handler import (
+    append_json, read_json, write_json,
+    update_json, delete_json
+)
+from validators import validate_email, InvalidEmailError
 
 class University:
+    """Service layer for managing students, professors, and courses."""
 
+    @staticmethod
     def add_student():
         try:
-            id = input("Enter student's ID: ")
-            name = str(input("Enter student's name: "))
-            email = str(input("Enter student's Email: "))
-            new_student = Student(id, name, email)
-            students = read_json("data/storage/students.json")
-        except Exception as e:
-            print(f"Error: {e}")
-        else:
-            for student in students:
-                if student["id"] == id or student["email"] == email:
-                    print(f"Student Id or Email already exists, enter a new student")
-                    return
-            students.append(new_student.to_dict())
-            write_json("data/storage/students.json", students)
-            print("Student added successfully!")
+            id_ = input("Enter student's ID: ").strip()
+            name = input("Enter student's name: ").strip()
+            email = input("Enter student's Email: ").strip()
+            validate_email(email)
+        except InvalidEmailError as e:
+            print(e)
+            return
+        students = read_json("students.json")
+        if any(s["id"] == id_ or s["email"] == email for s in students):
+            print("Student ID or Email already exists.")
+            return
+        new_student = Student(id_, name, email)
+        append_json("students.json", new_student.to_dict())
+        print("Student added successfully!")
 
+    @staticmethod
     def get_student():
-        id = input("Enter student's ID: ")
-        students = read_json("data/storage/students.json")
-        for student in students:
-            if student["id"] == id:
-                print(f"Student Details \n{"-" * 10}")
-                print(f"ID: {student["id"]} \nName: {student["name"]} \nEmail: {student["email"]}")
-            else:
-                print(f"Error: Student Id:{id} doesn't exist!")    
+        id_ = input("Enter student's ID: ").strip()
+        students = read_json("students.json")
+        for s in students:
+            if s["id"] == id_:
+                print("Student Details\n" + "-"*20)
+                print(f"ID: {s['id']}\nName: {s['name']}\nEmail: {s['email']}")
+                return
+        print(f"Error: Student ID {id_} not found.")
 
+    @staticmethod
     def list_students():
-        students = read_json("data/storage/students.json")
-        print(f"{"id":<4} | {"name":<20} | {"email":<20} \n{"-" * 40}")
-        for student in students:
-            print(f"{student["id"]:<4} | {student["name"]:<20} | {student["email"]:<20}")
-        
+        students = read_json("students.json")
+        header = f"{'ID':<10} | {'Name':<20} | {'Email':<30}"
+        print(header)
+        print("-" * len(header))
+        for s in students:
+            print(f"{s['id']:<10} | {s['name']:<20} | {s['email']:<30}")
+
+    @staticmethod
     def delete_student():
-        id = input("Enter student's ID: ")
-        students = read_json("data/storage/students.json")
-        for student in students:
-            if student["id"] == id:
-                while True:
-                    print(f"You are about to delete a student: {student["name"]} with ID {student["id"]}")
-                    choice = str(input("Are you sure? (yes/no)")).strip().lower()
-                    if choice == "yes":
-                        delete_json_record("data/storage/students.json", key="id", value=id)
-                        print(f"{student["name"]} deleted successfully")
-                    elif choice == "no":
-                        break
-                    else:
-                        print("Invalid input. Enter yes or no")
-                
+        id_ = input("Enter student's ID: ").strip()
+        students = read_json("students.json")
+        student = next((s for s in students if s['id'] == id_), None)
+        if not student:
+            print(f"Error: Student ID {id_} not found.")
+            return
+        confirm = input(f"Delete {student['name']} (ID: {id_})? [y/N]: ").strip().lower()
+        if confirm == 'y':
+            delete_json("students.json", 'id', id_)
+            print("Student deleted successfully.")
+
+    @staticmethod
     def add_professor():
         try:
-            id = input("Enter professor's ID: ")
-            name = str(input("Enter professor's name: "))
-            email = str(input("Enter professor's Email: "))
-            department = str(input("Enter professor's department: "))
-        except Exception as e:
-            print("Error: {e}")
-        else:
-            new_professor = Professor(id, name, email, department)
-            professors = read_json("data/storage/professors.json")
-            for professor in professors:
-                if professor["id"] == id or professor["email"] == email:
-                    print(f"Professor Id or Email already exists, enter a new professor")
-                    return
-            professors.append(new_professor.to_dict())
-            write_json("data/storage/professors.json", professors)
-            print("Professor added successfully!")
+            id_ = input("Enter professor's ID: ").strip()
+            name = input("Enter professor's name: ").strip()
+            email = input("Enter professor's Email: ").strip()
+            validate_email(email)
+            department = input("Enter department: ").strip()
+        except InvalidEmailError as e:
+            print(e)
+            return
+        profs = read_json("professors.json")
+        if any(p["id"] == id_ or p["email"] == email for p in profs):
+            print("Professor ID or Email already exists.")
+            return
+        new_prof = Professor(id_, name, email, department)
+        append_json("professors.json", new_prof.to_dict())
+        print("Professor added successfully!")
 
-
+    @staticmethod
     def get_professor():
-        id = input("Enter professor's ID: ")
-        professors = read_json("data/storage/professors.json")
-        for professor in professors:
-            if professor["id"] == id:
-                print(f"Professor Details \n{"-" * 10}")
-                print(f"ID: {professor["id"]} Name: {professor["name"]} Email: {professor["email"]} Department: {professor["department"]}")
-            else:
-                print(f"Error: Professor Id:{id} doesn't exist!")
+        id_ = input("Enter professor's ID: ").strip()
+        profs = read_json("professors.json")
+        for p in profs:
+            if p["id"] == id_:
+                print("Professor Details\n" + "-"*20)
+                print(f"ID: {p['id']}\nName: {p['name']}\nEmail: {p['email']}\nDepartment: {p['department']}")
+                return
+        print(f"Error: Professor ID {id_} not found.")
 
+    @staticmethod
     def list_professors():
-        professors = read_json("data/storage/professors.json")
-        print(f"{"ID":<4} | {"NAME":<20} | {"EMAIL":<20} | {"DEPARTMENT":<20}")
-        for professor in professors:
-            print(f"{professor["id"]:<4} | {professor["name"]:<20} | {professor["email"]:<20} | {professor["department"]:<20}")
-   
-        
+        profs = read_json("professors.json")
+        header = f"{'ID':<10} | {'Name':<20} | {'Email':<30} | {'Department':<20}"
+        print(header)
+        print("-" * len(header))
+        for p in profs:
+            print(f"{p['id']:<10} | {p['name']:<20} | {p['email']:<30} | {p['department']:<20}")
+
+    @staticmethod
     def delete_professor():
-        id = input("Enter student's ID: ")
-        professors = read_json("data/storage/professors.json")
-        for professor in professors:
-            if professor["id"] == id:
-                while True:
-                    print(f"You are about to delete a professor: {professor["name"]} with ID {professor["id"]}")
-                    choice = str(input("Are you sure? (yes/no)")).strip().lower()
-                    if choice == "yes":
-                        delete_json_record("data/storage/professors.json", key="id", value=id)
-                        print(f"{professor["name"]} deleted successfully")
-                    elif choice == "no":
-                        break
-                    else:
-                        print("Invalid input. Enter yes or no")
+        id_ = input("Enter professor's ID: ").strip()
+        profs = read_json("professors.json")
+        prof = next((p for p in profs if p['id'] == id_), None)
+        if not prof:
+            print(f"Error: Professor ID {id_} not found.")
+            return
+        confirm = input(f"Delete {prof['name']} (ID: {id_})? [y/N]: ").strip().lower()
+        if confirm == 'y':
+            delete_json("professors.json", 'id', id_)
+            print("Professor deleted successfully.")
 
+    @staticmethod
     def add_course():
-        try:
-            code = input("Enter course code: ")
-            title = str(input("Enter course title: "))
-            credits = str(input("Enter course credit(s): "))
-            professor = str(input("Enter couurse professor: "))
-        except Exception as e:
-            print(f"Error: {e}")
-        else:
-            new_course = Course(code, title, credits, professor)
-            courses = read_json("data/storage/courses.json")
-            for course in courses:
-                if course["code"] == code:
-                    print(f"Course code:{course["code"]} already exists, enter a new course")
-                    return
-            courses.append(new_course.to_dict())
-            write_json("data/storage/courses.json", courses)
-            print("Course added successfully!")
+        code = input("Enter course code: ").strip()
+        title = input("Enter course title: ").strip()
+        credits = input("Enter credits (integer): ").strip()
+        professor = input("Enter professor ID: ").strip()
+        if not credits.isdigit():
+            print("Credits must be a number.")
+            return
+        courses = read_json("courses.json")
+        if any(c["code"] == code for c in courses):
+            print("Course code already exists.")
+            return
+        new_course = Course(code, title, int(credits), professor)
+        append_json("courses.json", new_course.to_dict())
+        print("Course added successfully!")
 
-
+    @staticmethod
     def get_course():
-        code = input("Enter course code: ")
-        courses = read_json("data/storage/courses.json")
-        for course in courses:
-            if course["code"] == code:
-                print(f"Course Details \n{"-" * 10}")
-                print(f"ID: {course["code"]} \nName: {course["title"]} \nCredits: {course["credits"]} \nProfessor Incharge: {course["professor"]}")
-            else:
-                print(f"Error: Course code:{code} doesn't exist!")
-    
+        code = input("Enter course code: ").strip()
+        courses = read_json("courses.json")
+        for c in courses:
+            if c["code"] == code:
+                print("Course Details\n" + "-"*20)
+                print(f"Code: {c['code']}\nTitle: {c['title']}\nCredits: {c['credits']}\nProfessor: {c['professor']}")
+                return
+        print(f"Error: Course code {code} not found.")
+
+    @staticmethod
     def list_courses():
-        courses = read_json("data/storage/courses.json")
-        print(f"{"CODE":<4} | {"TITLE":<20} | {"CREDIT":<3} | {"PROFESSOR":<20}")
-        for course in courses:
-            return course
-        
+        courses = read_json("courses.json")
+        header = f"{'Code':<10} | {'Title':<30} | {'Credits':<7} | {'Professor':<10}"
+        print(header)
+        print("-" * len(header))
+        for c in courses:
+            print(f"{c['code']:<10} | {c['title']:<30} | {c['credits']:<7} | {c['professor']:<10}")
+
+    @staticmethod
     def delete_course():
-        code = input("Enter course code: ")
-        courses = read_json("data/storage/courses.json")
-        for course in courses:
-            if course["code"] == code:
-                while True:
-                    print(f"You are about to delete a course: {course["code"]}: {course["title"]}")
-                    choice = str(input("Are you sure? (yes/no)")).strip().lower()
-                    if choice == "yes":
-                        delete_json_record("data/storage/courses.json", key="code", value=code)
-                        print(f"{course["code"]}: {courses["title"]} deleted successfully")
-                    elif choice == "no":
-                        break
-                    else:
-                        print("Invalid input. Enter yes or no")
+        code = input("Enter course code: ").strip()
+        courses = read_json("courses.json")
+        course = next((c for c in courses if c['code'] == code), None)
+        if not course:
+            print(f"Error: Course code {code} not found.")
+            return
+        confirm = input(f"Delete {course['title']} (Code: {code})? [y/N]: ").strip().lower()
+        if confirm == 'y':
+            delete_json("courses.json", 'code', code)
+            print("Course deleted successfully.")

@@ -1,7 +1,11 @@
+import re
 
-class InvalidEmailError(Exception):
-    def __init__(self):
-        pass
+class InvalidEmailError(ValueError):
+    """Raised when an email address is not valid."""
+    pass
 
-    def __str__(self):
-        return "Error: Enter a valid Email"
+
+def validate_email(email: str):
+    pattern = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+    if not re.match(pattern, email):
+        raise InvalidEmailError(f"Invalid email address: {email}")

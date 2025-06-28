@@ -1,123 +1,36 @@
-# 
 from university import University
-from models import Professor, Student, Course
-from validators import InvalidEmailError
-
-def main_menu():
-    menu = ["students", "courses", "professors", "exit"]
-    i = 1
-    for item in menu:
-        print(f"{i}. {item.title()}")
-        i += 1
-
-def student_menu():
-    menu = ["add student", "search for student", "view students", "delete student", "main menu"]
-    i = 1
-    for item in menu:
-        print(f"{i}. {item.title()}")
-        i += 1
-
-def professor_menu():
-    menu = ["add professor", "search professors", "view professors", "delete professor", "main menu"]
-    i = 1
-    for item in menu:
-        print(f"{i}. {item.title()}")
-        i += 1
-
-def course_menu():
-    menu = ["add course", "search courses", "view courses", "delete course", "main menu"]
-    i = 1
-    for item in menu:
-        print(f"{i}. {item.title()}")
-        i += 1
 
 
+def display_menu(title: str, options: list[str]) -> int:
+    print(f"\n{title}")
+    for idx, opt in enumerate(options, 1):
+        print(f"{idx}. {opt.title()}")
+    choice = input("Choose an option: ").strip()
+    return int(choice) if choice.isdigit() else -1
 
-university = University
 
 def main():
+    uni = University()
     while True:
-        print("Welcome to My University Management System!")
-        print("Main menu")
-        main_menu()
-        try:
-            option = int(input("Choose an option: "))
-        except Exception as e:
-            print(f"Error: {e}")
-
-        # 
-        match option:
-            case 1:
-                print("Student Menu")
-                student_menu()
-                try:
-                    student_option = int(input("Choose an option: "))
-                except Exception as e:
-                    print(f"Error: {e}")
-                else:
-                    match student_option:
-                        case 1:
-                            university.add_student()
-                        case 2:
-                            university.get_student()
-                        case 3:
-                            university.list_students()
-                        case 4:
-                            university.delete_student()
-                        case 5:
-                            pass
-                        case _:
-                            print("Invalid input")
-            case 2:
-                print("Course Menu")
-                course_menu()
-                try:
-                    course_option = int(input("Choose an option: "))
-                except Exception as e:
-                    print(f"Error: e")
-                else:
-                    match course_option:
-                        case 1:
-                            university.add_course()
-                        case 2:
-                            university.get_course()
-                        case 3:
-                            university.list_courses()
-                        case 4:
-                            university.delete_course()
-                        case 5:
-                            pass
-                        case _:
-                            print("Invalid input")
-                
-            case 3:
-                print("Professor Menu")
-                professor_menu()
-                try:
-                    professor_option = int(input("Choose an option: "))
-                except Exception as e:
-                    print(f"Error: {e}")
-                else:
-                    match professor_option:
-                        case 1:
-                            university.add_professor()
-                        case 2:
-                            university.get_professor()
-                        case 3:
-                            university.list_professors()
-                        case 4:
-                            university.delete_professor()
-                        case 5:
-                            pass
-                        case _:
-                            print("Invalid input")
-            case 4:
-                print("Exiting My University Management System!")
-                break
-
-            case _:
-                print("Invalid input")
-            
+        main_opts = ["students", "courses", "professors", "exit"]
+        choice = display_menu("Main Menu", main_opts)
+        if choice == 1:
+            sub = ["add", "search", "list", "delete", "back"]
+            action = display_menu("Student Menu", sub)
+            {1: uni.add_student, 2: uni.get_student, 3: uni.list_students, 4: uni.delete_student}.get(action, lambda: None)()
+        elif choice == 2:
+            sub = ["add", "search", "list", "delete", "back"]
+            action = display_menu("Course Menu", sub)
+            {1: uni.add_course, 2: uni.get_course, 3: uni.list_courses, 4: uni.delete_course}.get(action, lambda: None)()
+        elif choice == 3:
+            sub = ["add", "search", "list", "delete", "back"]
+            action = display_menu("Professor Menu", sub)
+            {1: uni.add_professor, 2: uni.get_professor, 3: uni.list_professors, 4: uni.delete_professor}.get(action, lambda: None)()
+        elif choice == 4:
+            print("Goodbye!")
+            break
+        else:
+            print("Invalid option, try again.")
 
 
 if __name__ == "__main__":
