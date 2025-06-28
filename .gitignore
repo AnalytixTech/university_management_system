@@ -1,0 +1,47 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+.venv/
+ENV/
+
+# Editor-specific settings
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Log or temp files
+*.log
+*.tmp
+
+# Python cache
+*.egg-info/
+.eggs/
+*.pyo
+
+# Test artifacts
+coverage/
+htmlcov/
+.pytest_cache/
+
+# If you ever add compiled Python extensions
+build/
+dist/
+*.so
+
+# Avoid tracking secrets
+*.env
+.env.*
+
+# Optional: ignore data storage if desired
+# Comment this out if you want to version your JSON data
+data/storage/*.json
