@@ -14,16 +14,14 @@ def main():
     while True:
         main_opts = ["students", "courses", "professors", "exit"]
         choice = display_menu("Main Menu", main_opts)
+        sub = ["add", "search", "list", "delete", "back"]
         if choice == 1:
-            sub = ["add", "search", "list", "delete", "back"]
             action = display_menu("Student Menu", sub)
             {1: uni.add_student, 2: uni.get_student, 3: uni.list_students, 4: uni.delete_student}.get(action, lambda: None)()
         elif choice == 2:
-            sub = ["add", "search", "list", "delete", "back"]
             action = display_menu("Course Menu", sub)
             {1: uni.add_course, 2: uni.get_course, 3: uni.list_courses, 4: uni.delete_course}.get(action, lambda: None)()
         elif choice == 3:
-            sub = ["add", "search", "list", "delete", "back"]
             action = display_menu("Professor Menu", sub)
             {1: uni.add_professor, 2: uni.get_professor, 3: uni.list_professors, 4: uni.delete_professor}.get(action, lambda: None)()
         elif choice == 4:
