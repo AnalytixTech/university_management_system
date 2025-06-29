@@ -1,162 +1,142 @@
+from db import users_col, students_col, professors_col, courses_col
 from models import Student, Professor, Course
-from data.file_handler import (
-    append_json, read_json, write_json,
-    update_json, delete_json
-)
-from validators import validate_email, InvalidEmailError
+from validators import (validate_email, InvalidEmailError,
+                        hash_password, verify_password, AuthenticationError)
 
 class University:
-    """Service layer for managing students, professors, and courses."""
+    def __init__(self):
+        self.current_user = None
 
-    @staticmethod
-    def add_student():
+    def register(self):
+        print("--- Registration ---")
+        role = input("Select role (student/professor): ").strip().lower()
+        if role not in ("student", "professor"):
+            print("Invalid role.")
+            return
+        id_    = input(f"Enter {role} ID: ").strip()
+        name   = input(f"Enter {role} name: ").strip()
+        email  = input("Enter email: ").strip()
+        pwd    = input("Enter password: ").strip()
         try:
-            id_ = input("Enter student's ID: ").strip()
-            name = input("Enter student's name: ").strip()
-            email = input("Enter student's Email: ").strip()
             validate_email(email)
         except InvalidEmailError as e:
-            print(e)
+            print(e); return
+        if users_col.find_one({"email": email}):
+            print("Email already registered.")
             return
-        students = read_json("students.json")
-        if any(s["id"] == id_ or s["email"] == email for s in students):
-            print("Student ID or Email already exists.")
-            return
-        new_student = Student(id_, name, email)
-        append_json("students.json", new_student.to_dict())
-        print("Student added successfully!")
+        users_col.insert_one({
+            "id": id_, "name": name, "email": email,
+            "password": hash_password(pwd), "role": role
+        })
+        if role == "student":
+            students_col.insert_one(Student(id_, name, email).to_dict())
+        else:
+            dept = input("Enter department: ").strip()
+            professors_col.insert_one(Professor(id_, name, email, dept).to_dict())
+        print("Registration successful!")
 
-    @staticmethod
-    def get_student():
-        id_ = input("Enter student's ID: ").strip()
-        students = read_json("students.json")
-        for s in students:
-            if s["id"] == id_:
-                print("Student Details\n" + "-"*20)
-                print(f"ID: {s['id']}\nName: {s['name']}\nEmail: {s['email']}")
+    def login(self):
+        print("--- Login ---")
+        email = input("Email: ").strip()
+        pwd   = input("Password: ").strip()
+        user = users_col.find_one({"email": email}, {"_id": 0})
+        if not user or not verify_password(pwd, user["password"]):
+            print("Invalid credentials.")
+            return
+        self.current_user = user
+        print(f"Logged in as {user['role']} {user['name']}")
+
+    def require_login(func):
+        def wrapper(self, *args, **kwargs):
+            if not self.current_user:
+                print("Please login first.")
                 return
-        print(f"Error: Student ID {id_} not found.")
+            return func(self, *args, **kwargs)
+        return wrapper
 
-    @staticmethod
-    def list_students():
-        students = read_json("students.json")
-        header = f"{'ID':<10} | {'Name':<20} | {'Email':<30}"
-        print(header)
-        print("-" * len(header))
-        for s in students:
-            print(f"{s['id']:<10} | {s['name']:<20} | {s['email']:<30}")
+    def require_role(role):
+        def decorator(func):
+            def wrapper(self, *args, **kwargs):
+                if not self.current_user or self.current_user.get("role") != role:
+                    print(f"Action requires {role} role.")
+                    return
+                return func(self, *args, **kwargs)
+            return wrapper
+        return decorator
 
-    @staticmethod
-    def delete_student():
-        id_ = input("Enter student's ID: ").strip()
-        students = read_json("students.json")
-        student = next((s for s in students if s['id'] == id_), None)
-        if not student:
-            print(f"Error: Student ID {id_} not found.")
+    @require_login
+    @require_role("professor")
+    def create_course(self):
+        code = input("Course code: ").strip()
+        if courses_col.find_one({"code": code}):
+            print("Course code exists.")
             return
-        confirm = input(f"Delete {student['name']} (ID: {id_})? [y/N]: ").strip().lower()
-        if confirm == 'y':
-            delete_json("students.json", 'id', id_)
-            print("Student deleted successfully.")
-
-    @staticmethod
-    def add_professor():
-        try:
-            id_ = input("Enter professor's ID: ").strip()
-            name = input("Enter professor's name: ").strip()
-            email = input("Enter professor's Email: ").strip()
-            validate_email(email)
-            department = input("Enter department: ").strip()
-        except InvalidEmailError as e:
-            print(e)
+        title   = input("Title: ").strip()
+        creds   = input("Credits: ").strip()
+        if not creds.isdigit():
+            print("Credits must be numeric.")
             return
-        profs = read_json("professors.json")
-        if any(p["id"] == id_ or p["email"] == email for p in profs):
-            print("Professor ID or Email already exists.")
+        prof_id = self.current_user["id"]
+        c = Course(code, title, int(creds), prof_id)
+        courses_col.insert_one(c.to_dict())
+        print("Course created.")
+
+    @require_login
+    @require_role("student")
+    def apply_course(self):
+        code = input("Course code to apply: ").strip()
+        if not courses_col.find_one({"code": code}):
+            print("Course not found.")
             return
-        new_prof = Professor(id_, name, email, department)
-        append_json("professors.json", new_prof.to_dict())
-        print("Professor added successfully!")
+        courses_col.update_one({"code": code}, {"$addToSet": {"applications": self.current_user["id"]}})
+        print("Applied to course.")
 
-    @staticmethod
-    def get_professor():
-        id_ = input("Enter professor's ID: ").strip()
-        profs = read_json("professors.json")
-        for p in profs:
-            if p["id"] == id_:
-                print("Professor Details\n" + "-"*20)
-                print(f"ID: {p['id']}\nName: {p['name']}\nEmail: {p['email']}\nDepartment: {p['department']}")
-                return
-        print(f"Error: Professor ID {id_} not found.")
-
-    @staticmethod
-    def list_professors():
-        profs = read_json("professors.json")
-        header = f"{'ID':<10} | {'Name':<20} | {'Email':<30} | {'Department':<20}"
-        print(header)
-        print("-" * len(header))
-        for p in profs:
-            print(f"{p['id']:<10} | {p['name']:<20} | {p['email']:<30} | {p['department']:<20}")
-
-    @staticmethod
-    def delete_professor():
-        id_ = input("Enter professor's ID: ").strip()
-        profs = read_json("professors.json")
-        prof = next((p for p in profs if p['id'] == id_), None)
-        if not prof:
-            print(f"Error: Professor ID {id_} not found.")
-            return
-        confirm = input(f"Delete {prof['name']} (ID: {id_})? [y/N]: ").strip().lower()
-        if confirm == 'y':
-            delete_json("professors.json", 'id', id_)
-            print("Professor deleted successfully.")
-
-    @staticmethod
-    def add_course():
-        code = input("Enter course code: ").strip()
-        title = input("Enter course title: ").strip()
-        credits = input("Enter credits (integer): ").strip()
-        professor = input("Enter professor ID: ").strip()
-        if not credits.isdigit():
-            print("Credits must be a number.")
-            return
-        courses = read_json("courses.json")
-        if any(c["code"] == code for c in courses):
-            print("Course code already exists.")
-            return
-        new_course = Course(code, title, int(credits), professor)
-        append_json("courses.json", new_course.to_dict())
-        print("Course added successfully!")
-
-    @staticmethod
-    def get_course():
-        code = input("Enter course code: ").strip()
-        courses = read_json("courses.json")
-        for c in courses:
-            if c["code"] == code:
-                print("Course Details\n" + "-"*20)
-                print(f"Code: {c['code']}\nTitle: {c['title']}\nCredits: {c['credits']}\nProfessor: {c['professor']}")
-                return
-        print(f"Error: Course code {code} not found.")
-
-    @staticmethod
-    def list_courses():
-        courses = read_json("courses.json")
-        header = f"{'Code':<10} | {'Title':<30} | {'Credits':<7} | {'Professor':<10}"
-        print(header)
-        print("-" * len(header))
-        for c in courses:
-            print(f"{c['code']:<10} | {c['title']:<30} | {c['credits']:<7} | {c['professor']:<10}")
-
-    @staticmethod
-    def delete_course():
-        code = input("Enter course code: ").strip()
-        courses = read_json("courses.json")
-        course = next((c for c in courses if c['code'] == code), None)
+    @require_login
+    @require_role("professor")
+    def list_applicants(self):
+        code = input("Course code: ").strip()
+        course = courses_col.find_one({"code": code}, {"_id": 0})
         if not course:
-            print(f"Error: Course code {code} not found.")
+            print("Course not found.")
             return
-        confirm = input(f"Delete {course['title']} (Code: {code})? [y/N]: ").strip().lower()
-        if confirm == 'y':
-            delete_json("courses.json", 'code', code)
-            print("Course deleted successfully.")
+        apps = course.get("applications", [])
+        print(f"Applicants: {apps}")
+
+    @require_login
+    @require_role("professor")
+    def accept_applicant(self):
+        code = input("Course code: ").strip()
+        sid  = input("Student ID to accept: ").strip()
+        res = courses_col.update_one(
+            {"code": code},
+            {"$pull": {"applications": sid}, "$addToSet": {"enrolled": sid}}
+        )
+        if res.modified_count:
+            print("Student accepted.")
+        else:
+            print("No such application or already enrolled.")
+
+    @require_login
+    @require_role("professor")
+    def assign_student(self):
+        code = input("Course code: ").strip()
+        sid  = input("Student ID to assign: ").strip()
+        courses_col.update_one({"code": code}, {"$addToSet": {"enrolled": sid}})
+        print("Student assigned.")
+
+    @require_login
+    @require_role("professor")
+    def remove_student(self):
+        code = input("Course code: ").strip()
+        sid  = input("Student ID to remove: ").strip()
+        courses_col.update_one({"code": code}, {"$pull": {"enrolled": sid}})
+        print("Student removed.")
+
+    @require_login
+    @require_role("student")
+    def list_enrolled_courses(self):
+        sid = self.current_user["id"]
+        enrolled = courses_col.find({"enrolled": sid}, {"_id": 0})
+        print("--- My Courses ---")
+        for course in enrolled:
+            print(f"{course['code']} - {course['title']}")
